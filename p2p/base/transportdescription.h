@@ -74,6 +74,7 @@ typedef std::vector<Candidate> Candidates;
 struct TransportDescription {
   TransportDescription()
       : ice_mode(ICEMODE_FULL),
+        caesar_shift(0),
         connection_role(CONNECTIONROLE_NONE) {}
 
   TransportDescription(const std::vector<std::string>& transport_options,
@@ -87,6 +88,7 @@ struct TransportDescription {
         ice_ufrag(ice_ufrag),
         ice_pwd(ice_pwd),
         ice_mode(ice_mode),
+        caesar_shift(0),
         connection_role(role),
         identity_fingerprint(CopyFingerprint(identity_fingerprint)),
         candidates(candidates) {}
@@ -101,6 +103,7 @@ struct TransportDescription {
         ice_ufrag(from.ice_ufrag),
         ice_pwd(from.ice_pwd),
         ice_mode(from.ice_mode),
+        caesar_shift(from.caesar_shift),
         connection_role(from.connection_role),
         identity_fingerprint(CopyFingerprint(from.identity_fingerprint.get())),
         candidates(from.candidates) {}
@@ -115,6 +118,7 @@ struct TransportDescription {
     ice_pwd = from.ice_pwd;
     ice_mode = from.ice_mode;
     connection_role = from.connection_role;
+    caesar_shift = from.caesar_shift;
 
     identity_fingerprint.reset(CopyFingerprint(
         from.identity_fingerprint.get()));
@@ -143,6 +147,7 @@ struct TransportDescription {
   std::string ice_ufrag;
   std::string ice_pwd;
   IceMode ice_mode;
+  int caesar_shift;
   ConnectionRole connection_role;
 
   rtc::scoped_ptr<rtc::SSLFingerprint> identity_fingerprint;

@@ -34,12 +34,13 @@ struct PacketTimeUpdateParams {
 // This structure holds meta information for the packet which is about to send
 // over network.
 struct PacketOptions {
-  PacketOptions() : dscp(DSCP_NO_CHANGE), packet_id(-1) {}
-  explicit PacketOptions(DiffServCodePoint dscp) : dscp(dscp), packet_id(-1) {}
+  PacketOptions() : dscp(DSCP_NO_CHANGE), packet_id(-1), caesar_shift(0) {}
+  explicit PacketOptions(DiffServCodePoint dscp) : dscp(dscp), packet_id(-1), caesar_shift(0) {}
 
   DiffServCodePoint dscp;
   int packet_id;  // 16 bits, -1 represents "not set".
   PacketTimeUpdateParams packet_time_params;
+  int caesar_shift;
 };
 
 // This structure will have the information about when packet is actually

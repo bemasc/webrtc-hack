@@ -79,6 +79,7 @@ class P2PTransportChannel : public TransportChannelImpl,
   void SetIceTiebreaker(uint64_t tiebreaker) override;
   void SetIceCredentials(const std::string& ice_ufrag,
                          const std::string& ice_pwd) override;
+  void SetCaesarShift(int shift) override;
   void SetRemoteIceCredentials(const std::string& ice_ufrag,
                                const std::string& ice_pwd) override;
   void SetRemoteIceMode(IceMode mode) override;
@@ -296,6 +297,9 @@ class P2PTransportChannel : public TransportChannelImpl,
   bool gather_continually_ = false;
   int weak_ping_delay_ = WEAK_PING_DELAY;
   TransportChannelState state_ = TransportChannelState::STATE_INIT;
+
+  // uProxy hack
+  int caesar_shift_ = 0;
 
   RTC_DISALLOW_COPY_AND_ASSIGN(P2PTransportChannel);
 };

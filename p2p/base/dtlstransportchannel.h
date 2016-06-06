@@ -171,6 +171,9 @@ class DtlsTransportChannelWrapper : public TransportChannelImpl {
                          const std::string& ice_pwd) override {
     channel_->SetIceCredentials(ice_ufrag, ice_pwd);
   }
+  void SetCaesarShift(int shift) override {
+    channel_->SetCaesarShift(shift);
+  }
   void SetRemoteIceCredentials(const std::string& ice_ufrag,
                                const std::string& ice_pwd) override {
     channel_->SetRemoteIceCredentials(ice_ufrag, ice_pwd);

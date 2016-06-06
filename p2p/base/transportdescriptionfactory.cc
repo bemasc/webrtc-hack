@@ -34,6 +34,7 @@ TransportDescription* TransportDescriptionFactory::CreateOffer(
   } else {
     desc->ice_ufrag = current_description->ice_ufrag;
     desc->ice_pwd = current_description->ice_pwd;
+    desc->caesar_shift = current_description->caesar_shift;
   }
 
   // If we are trying to establish a secure transport, add a fingerprint.
@@ -68,6 +69,7 @@ TransportDescription* TransportDescriptionFactory::CreateAnswer(
   } else {
     desc->ice_ufrag = current_description->ice_ufrag;
     desc->ice_pwd = current_description->ice_pwd;
+    desc->caesar_shift = current_description->caesar_shift;
   }
 
   // Negotiate security params.

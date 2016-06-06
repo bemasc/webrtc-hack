@@ -343,6 +343,11 @@ void P2PTransportChannel::SetIceCredentials(const std::string& ice_ufrag,
   // called.
 }
 
+void P2PTransportChannel::SetCaesarShift(int shift) {
+  ASSERT(worker_thread_ == rtc::Thread::Current());
+  caesar_shift_ = shift;
+}
+
 void P2PTransportChannel::SetRemoteIceCredentials(const std::string& ice_ufrag,
                                                   const std::string& ice_pwd) {
   ASSERT(worker_thread_ == rtc::Thread::Current());
@@ -915,7 +920,17 @@ int P2PTransportChannel::SendPacket(const char *data, size_t len,
     return -1;
   }
 
-  int sent = best_connection_->Send(data, len, options);
+  int sent;
+  if (caesar_shift_ == 0) {
+    sent = best_connection_->Send(data, len, options);
+  } else {
+    char shifted[len];
+    for (size_t i = 0; i < len; ++i) {
+      shifted[i] = data[i] + caesar_shift_;
+    }
+    sent = best_connection_->Send(shifted, len, options);
+  }
+
   if (sent <= 0) {
     ASSERT(sent < 0);
     error_ = best_connection_->GetError();
@@ -1414,7 +1429,15 @@ void P2PTransportChannel::OnReadPacket(Connection* connection,
     return;
 
   // Let the client know of an incoming packet
-  SignalReadPacket(this, data, len, packet_time, 0);
+  if (caesar_shift_ == 0) {
+    SignalReadPacket(this, data, len, packet_time, 0);
+  } else {
+    char unshifted[len];
+    for (size_t i = 0; i < len; ++i) {
+      unshifted[i] = data[i] - caesar_shift_;
+    }
+    SignalReadPacket(this, unshifted, len, packet_time, 0);
+  }
 
   // May need to switch the sending connection based on the receiving media path
   // if this is the controlled side.
