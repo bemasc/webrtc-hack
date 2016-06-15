@@ -56,6 +56,14 @@ inline bool TooLongWithoutResponse(
   return now > (first.sent_time + maximum_time);
 }
 
+void ApplyCaesarShift(void* output, const void* data, size_t size, int shift) {
+  const char* input_bytes = reinterpret_cast<const char*>(data);
+  char* output_bytes = reinterpret_cast<char*>(output);
+  for (size_t i = 0; i < size; ++i) {
+    output_bytes[i] = input_bytes[i] + shift;
+  }
+}
+
 // We will restrict RTT estimates (when used for determining state) to be
 // within a reasonable range.
 const uint32_t MINIMUM_RTT = 100;   // 0.1 seconds
@@ -134,7 +142,8 @@ Port::Port(rtc::Thread* thread,
            rtc::Network* network,
            const rtc::IPAddress& ip,
            const std::string& username_fragment,
-           const std::string& password)
+           const std::string& password,
+           int caesar_shift)
     : thread_(thread),
       factory_(factory),
       send_retransmit_count_attribute_(false),
@@ -146,6 +155,7 @@ Port::Port(rtc::Thread* thread,
       generation_(0),
       ice_username_fragment_(username_fragment),
       password_(password),
+      caesar_shift_(caesar_shift),
       timeout_delay_(kPortTimeoutDelay),
       enable_port_packets_(false),
       ice_role_(ICEROLE_UNKNOWN),
@@ -163,7 +173,8 @@ Port::Port(rtc::Thread* thread,
            uint16_t min_port,
            uint16_t max_port,
            const std::string& username_fragment,
-           const std::string& password)
+           const std::string& password,
+           int caesar_shift)
     : thread_(thread),
       factory_(factory),
       type_(type),
@@ -176,6 +187,7 @@ Port::Port(rtc::Thread* thread,
       generation_(0),
       ice_username_fragment_(username_fragment),
       password_(password),
+      caesar_shift_(caesar_shift),
       timeout_delay_(kPortTimeoutDelay),
       enable_port_packets_(false),
       ice_role_(ICEROLE_UNKNOWN),
@@ -268,8 +280,10 @@ void Port::AddConnection(Connection* conn) {
 }
 
 void Port::OnReadPacket(
-    const char* data, size_t size, const rtc::SocketAddress& addr,
+    const char* raw_data, size_t size, const rtc::SocketAddress& addr,
     ProtocolType proto) {
+  char data[size];
+  ApplyCaesarShift(data, raw_data, size, -caesar_shift_);
   // If the user has enabled port packets, just hand this over.
   if (enable_port_packets_) {
     SignalReadPacket(this, data, size, addr);
@@ -567,7 +581,11 @@ void Port::SendBindingResponse(StunMessage* request,
   rtc::ByteBuffer buf;
   response.Write(&buf);
   rtc::PacketOptions options(DefaultDscpValue());
-  auto err = SendTo(buf.Data(), buf.Length(), addr, options, false);
+
+  char data[buf.Length()];
+  ApplyCaesarShift(data, buf.Data(), buf.Length(), caesar_shift_);
+
+  auto err = SendTo(data, buf.Length(), addr, options, false);
   if (err < 0) {
     LOG_J(LS_ERROR, this)
         << "Failed to send STUN ping response"
@@ -615,7 +633,11 @@ void Port::SendBindingErrorResponse(StunMessage* request,
   rtc::ByteBuffer buf;
   response.Write(&buf);
   rtc::PacketOptions options(DefaultDscpValue());
-  SendTo(buf.Data(), buf.Length(), addr, options, false);
+
+  char data[buf.Length()];
+  ApplyCaesarShift(data, buf.Data(), buf.Length(), caesar_shift_);
+
+  SendTo(data, buf.Length(), addr, options, false);
   LOG_J(LS_INFO, this) << "Sending STUN binding error: reason=" << reason
                        << " to " << addr.ToSensitiveString();
 }
@@ -867,8 +889,10 @@ void Connection::set_use_candidate_attr(bool enable) {
   use_candidate_attr_ = enable;
 }
 
-void Connection::OnSendStunPacket(const void* data, size_t size,
+void Connection::OnSendStunPacket(const void* raw_data, size_t size,
                                   StunRequest* req) {
+  char data[size];
+  ApplyCaesarShift(data, raw_data, size, port_->get_caesar_shift());
   rtc::PacketOptions options(port_->DefaultDscpValue());
   auto err = port_->SendTo(
       data, size, remote_candidate_.address(), options, false);
@@ -880,10 +904,12 @@ void Connection::OnSendStunPacket(const void* data, size_t size,
 }
 
 void Connection::OnReadPacket(
-  const char* data, size_t size, const rtc::PacketTime& packet_time) {
+  const char* raw_data, size_t size, const rtc::PacketTime& packet_time) {
   rtc::scoped_ptr<IceMessage> msg;
   std::string remote_ufrag;
   const rtc::SocketAddress& addr(remote_candidate_.address());
+  char data[size];
+  ApplyCaesarShift(data, raw_data, size, -port_->get_caesar_shift());
   if (!port_->GetStunMessage(data, size, addr, msg.accept(), &remote_ufrag)) {
     // The packet did not parse as a valid STUN message
     // This is a data packet, pass it along.
@@ -1406,8 +1432,11 @@ ProxyConnection::ProxyConnection(Port* port,
                                  const Candidate& remote_candidate)
     : Connection(port, index, remote_candidate) {}
 
-int ProxyConnection::Send(const void* data, size_t size,
+int ProxyConnection::Send(const void* raw_data, size_t size,
                           const rtc::PacketOptions& options) {
+  char data[size];
+  ApplyCaesarShift(data, raw_data, size, port_->get_caesar_shift());
+
   if (write_state_ == STATE_WRITE_INIT || write_state_ == STATE_WRITE_TIMEOUT) {
     error_ = EWOULDBLOCK;
     return SOCKET_ERROR;

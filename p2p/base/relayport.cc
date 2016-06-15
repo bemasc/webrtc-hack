@@ -194,7 +194,8 @@ RelayPort::RelayPort(rtc::Thread* thread,
            min_port,
            max_port,
            username,
-           password),
+           password,
+           0 /* caesar_shift */),
       ready_(false),
       error_(0) {
   entries_.push_back(

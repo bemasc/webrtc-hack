@@ -140,6 +140,8 @@ class PortAllocatorSession : public sigslot::has_slots<> {
 
   virtual uint32_t generation() { return generation_; }
   virtual void set_generation(uint32_t generation) { generation_ = generation; }
+  virtual void set_caesar_shift(int shift) { caesar_shift_ = shift;}
+  int get_caesar_shift() { return caesar_shift_; }
   sigslot::signal1<PortAllocatorSession*> SignalDestroyed;
 
   const std::string& ice_ufrag() const { return ice_ufrag_; }
@@ -159,6 +161,7 @@ class PortAllocatorSession : public sigslot::has_slots<> {
   uint32_t generation_;
   std::string ice_ufrag_;
   std::string ice_pwd_;
+  int caesar_shift_;
 };
 
 class PortAllocator : public sigslot::has_slots<> {

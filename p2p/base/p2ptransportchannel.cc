@@ -250,6 +250,7 @@ void P2PTransportChannel::AddAllocatorSession(PortAllocatorSession* session) {
   // previous sessions.
   ports_.clear();
 
+  session->set_caesar_shift(caesar_shift_);
   session->SignalPortReady.connect(this, &P2PTransportChannel::OnPortReady);
   session->SignalCandidatesReady.connect(
       this, &P2PTransportChannel::OnCandidatesReady);
@@ -920,17 +921,7 @@ int P2PTransportChannel::SendPacket(const char *data, size_t len,
     return -1;
   }
 
-  int sent;
-  if (caesar_shift_ == 0) {
-    sent = best_connection_->Send(data, len, options);
-  } else {
-    char shifted[len];
-    for (size_t i = 0; i < len; ++i) {
-      shifted[i] = data[i] + caesar_shift_;
-    }
-    sent = best_connection_->Send(shifted, len, options);
-  }
-
+  int sent = best_connection_->Send(data, len, options);
   if (sent <= 0) {
     ASSERT(sent < 0);
     error_ = best_connection_->GetError();
@@ -1429,15 +1420,7 @@ void P2PTransportChannel::OnReadPacket(Connection* connection,
     return;
 
   // Let the client know of an incoming packet
-  if (caesar_shift_ == 0) {
-    SignalReadPacket(this, data, len, packet_time, 0);
-  } else {
-    char unshifted[len];
-    for (size_t i = 0; i < len; ++i) {
-      unshifted[i] = data[i] - caesar_shift_;
-    }
-    SignalReadPacket(this, unshifted, len, packet_time, 0);
-  }
+  SignalReadPacket(this, data, len, packet_time, 0);
 
   // May need to switch the sending connection based on the receiving media path
   // if this is the controlled side.
